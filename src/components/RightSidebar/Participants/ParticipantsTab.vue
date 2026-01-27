@@ -10,13 +10,13 @@
 				v-if="canSearch"
 				ref="searchBox"
 				v-model:value="searchText"
-				v-model:is-focused="isFocused"
+				v-model:isFocused="isFocused"
 				class="search-form__input"
-				:placeholder-text="searchBoxPlaceholder"
+				:placeholderText="searchBoxPlaceholder"
 				:aria-describedby="showSearchBoxDescription ? searchBoxDescriptionId : undefined"
 				@input="handleInput"
 				@keydown.enter="addParticipants(participantPhoneItem)"
-				@abort-search="abortSearch" />
+				@abortSearch="abortSearch" />
 			<div
 				v-if="showSearchBoxDescription"
 				:id="searchBoxDescriptionId"
@@ -33,7 +33,7 @@
 
 		<SelectPhoneNumber
 			v-if="canAddPhones"
-			v-model:participant-phone-item="participantPhoneItem"
+			v-model:participantPhoneItem="participantPhoneItem"
 			:name="t('spreed', 'Add a phone number')"
 			:value="searchText"
 			@select="addParticipants" />
@@ -66,22 +66,23 @@
 				v-if="canAdd"
 				class="search-results"
 				:token="token"
-				:search-results="searchResults"
-				:only-users="isOneToOneConversation"
-				:contacts-loading="contactsLoading"
-				:no-results="noResults"
-				:search-text="searchText"
+				:searchResults="searchResults"
+				:onlyUsers="isOneToOneConversation"
+				:contactsLoading="contactsLoading"
+				:noResults="noResults"
+				:searchText="searchText"
 				@click="addParticipants" />
 		</div>
 	</div>
 </template>
 
 <script>
+import { isCancel } from '@nextcloud/axios'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { subscribe, unsubscribe } from '@nextcloud/event-bus'
 import { t } from '@nextcloud/l10n'
 import debounce from 'debounce'
-import { ref, toRefs, useId } from 'vue'
+import { ref, useId } from 'vue'
 import NcAppNavigationCaption from '@nextcloud/vue/components/NcAppNavigationCaption'
 import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import IconInformationOutline from 'vue-material-design-icons/InformationOutline.vue'
@@ -103,7 +104,7 @@ import { autocompleteQuery } from '../../../services/coreService.ts'
 import { EventBus } from '../../../services/EventBus.ts'
 import { addParticipant } from '../../../services/participantsService.js'
 import { useSidebarStore } from '../../../stores/sidebar.ts'
-import CancelableRequest from '../../../utils/cancelableRequest.js'
+import CancelableRequest from '../../../utils/CancelableRequest.ts'
 
 const isFederationEnabled = getTalkConfig('local', 'federation', 'enabled')
 
@@ -296,7 +297,7 @@ export default {
 					this.initializeNavigation()
 				})
 			} catch (exception) {
-				if (CancelableRequest.isCancel(exception)) {
+				if (isCancel(exception)) {
 					return
 				}
 				console.error(exception)

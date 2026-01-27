@@ -7,7 +7,7 @@
 	<NcAppSettingsDialog
 		v-model:open="showSettings"
 		:name="t('spreed', 'App settings')"
-		show-navigation>
+		showNavigation>
 		<!-- Custom settings sections registered via OCA.Talk.Settings -->
 		<NcAppSettingsSection
 			v-for="{ id, name, element } in customSettingsSections"
@@ -23,21 +23,28 @@
 			<NcFormBox>
 				<NcFormBoxSwitch
 					v-if="supportStartWithoutMedia"
-					:model-value="startWithoutMediaEnabled"
+					:modelValue="startWithoutMediaEnabled"
 					:label="t('spreed', 'Turn camera and microphone off by default')"
 					:disabled="mediaLoading"
-					@update:model-value="toggleStartWithoutMedia" />
+					@update:modelValue="toggleStartWithoutMedia" />
 				<NcFormBoxSwitch
 					v-if="supportDefaultBlurVirtualBackground"
-					:model-value="settingsStore.blurVirtualBackgroundEnabled"
+					:modelValue="settingsStore.blurVirtualBackgroundEnabled"
 					:label="t('spreed', 'Blur camera background by default')"
-					@update:model-value="setBlurVirtualBackgroundEnabled" />
+					@update:modelValue="setBlurVirtualBackgroundEnabled" />
 				<NcFormBoxSwitch
 					v-if="!isGuest"
-					:model-value="hideMediaSettings"
+					:modelValue="hideMediaSettings"
 					:label="t('spreed', 'Skip device preview before joining a call')"
 					:description="t('spreed', 'Always shown if recording consent is required')"
-					@update:model-value="setHideMediaSettings" />
+					@update:modelValue="setHideMediaSettings" />
+				<NcFormBoxButton
+					:label="t('spreed', 'Microphone settings')"
+					@click="openAdvancedSettings">
+					<template #icon>
+						<IconTune :size="20" />
+					</template>
+				</NcFormBoxButton>
 			</NcFormBox>
 
 			<NcButton
@@ -54,35 +61,7 @@
 		<NcAppSettingsSection
 			id="talk_appearance"
 			:name="t('spreed', 'Appearance & Sounds')">
-			<NcFormBox>
-				<NcFormBoxSwitch
-					v-if="!isGuest && supportConversationsListStyle"
-					:model-value="conversationsListStyle"
-					:label="t('spreed', 'Compact conversations list')"
-					:disabled="appearanceLoading"
-					@update:model-value="toggleConversationsListStyle" />
-				<NcFormBoxSwitch
-					v-if="supportChatStyle"
-					:model-value="chatSplitViewEnabled"
-					:label="t('spreed', 'Show your chat in split view')"
-					:disabled="chatAppearanceLoading"
-					@update:model-value="toggleChatStyle" />
-			</NcFormBox>
-
-			<NcFormBox>
-				<NcFormBoxSwitch
-					:model-value="shouldPlaySounds"
-					:label="t('spreed', 'Play sounds when participants join or leave a call')"
-					:description="t('spreed', 'Currently not available on iPhone and iPad due to technical restrictions by the manufacturer')"
-					:disabled="playSoundsLoading"
-					@update:model-value="togglePlaySounds" />
-				<NcFormBoxButton
-					v-if="!isGuest"
-					:label="t('spreed', 'Notification settings')"
-					:description="t('spreed', 'Sounds for chat and call notifications')"
-					:href="settingsUrl"
-					target="_blank" />
-			</NcFormBox>
+			<AppearanceSettings />
 		</NcAppSettingsSection>
 
 		<NcAppSettingsSection
@@ -91,18 +70,18 @@
 			:name="t('spreed', 'Privacy')">
 			<NcFormBox>
 				<NcFormBoxSwitch
-					:model-value="readStatusPrivacyIsPublic"
+					:modelValue="readStatusPrivacyIsPublic"
 					:label="t('spreed', 'Send read receipts')"
 					:description="t('spreed', 'When off, all read statuses will be hidden')"
 					:disabled="privacyLoading"
-					@update:model-value="toggleReadStatusPrivacy" />
+					@update:modelValue="toggleReadStatusPrivacy" />
 				<NcFormBoxSwitch
 					v-if="supportTypingStatus"
-					:model-value="typingStatusPrivacyIsPublic"
+					:modelValue="typingStatusPrivacyIsPublic"
 					:label="t('spreed', 'Share typing status')"
 					:description="t('spreed', 'When off, all typing indicators will be hidden')"
 					:disabled="privacyLoading"
-					@update:model-value="toggleTypingStatusPrivacy" />
+					@update:modelValue="toggleTypingStatusPrivacy" />
 			</NcFormBox>
 		</NcAppSettingsSection>
 
@@ -113,12 +92,21 @@
 			<NcFormBoxButton
 				:label="t('spreed', 'Attachments folder')"
 				:description="attachmentFolder"
-				inverted-accent
+				invertedAccent
 				@click="showFilePicker">
 				<template #icon>
 					<IconFolderOpenOutline :size="20" />
 				</template>
 			</NcFormBoxButton>
+		</NcAppSettingsSection>
+
+		<NcAppSettingsSection
+			v-if="supportLiveTranslation"
+			id="live_transcription"
+			:name="t('spreed', 'Live transcription')">
+			<NcFormBox v-slot="{ itemClass }">
+				<LiveTranscriptionTargetLanguageSelect :class="itemClass" />
+			</NcFormBox>
 		</NcAppSettingsSection>
 
 		<NcAppSettingsShortcutsSection
@@ -152,11 +140,12 @@
 </template>
 
 <script>
-import { showError, showSuccess } from '@nextcloud/dialogs'
+import { showError } from '@nextcloud/dialogs'
 import { getFilePickerBuilder } from '@nextcloud/dialogs'
 import { emit, subscribe, unsubscribe } from '@nextcloud/event-bus'
 import { t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
+import { spawnDialog } from '@nextcloud/vue/functions/dialog'
 import NcAppSettingsDialog from '@nextcloud/vue/components/NcAppSettingsDialog'
 import NcAppSettingsSection from '@nextcloud/vue/components/NcAppSettingsSection'
 import NcAppSettingsShortcutsSection from '@nextcloud/vue/components/NcAppSettingsShortcutsSection'
@@ -169,28 +158,32 @@ import NcHotkeyList from '@nextcloud/vue/components/NcHotkeyList'
 import NcKbd from '@nextcloud/vue/components/NcKbd'
 import IconFolderOpenOutline from 'vue-material-design-icons/FolderOpenOutline.vue'
 import IconMicrophoneOutline from 'vue-material-design-icons/MicrophoneOutline.vue'
+import IconTune from 'vue-material-design-icons/Tune.vue'
+import AdvancedAudioDialog from '../MediaSettings/AdvancedAudioDialog.vue'
+import AppearanceSettings from './AppearanceSettings.vue'
+import LiveTranscriptionTargetLanguageSelect from './LiveTranscriptionTargetLanguageSelect.vue'
 import { CHAT_STYLE, CONVERSATION, PRIVACY } from '../../constants.ts'
 import { getTalkConfig } from '../../services/CapabilitiesManager.ts'
 import { useCustomSettings } from '../../services/SettingsAPI.ts'
 import { useActorStore } from '../../stores/actor.ts'
 import { useSettingsStore } from '../../stores/settings.ts'
-import { useSoundsStore } from '../../stores/sounds.js'
 
 const disableKeyboardShortcuts = OCP.Accessibility.disableKeyboardShortcuts()
-const settingsUrl = generateUrl('/settings/user/notifications')
 
 const supportTypingStatus = getTalkConfig('local', 'chat', 'typing-privacy') !== undefined
 const supportStartWithoutMedia = getTalkConfig('local', 'call', 'start-without-media') !== undefined
-const supportConversationsListStyle = getTalkConfig('local', 'conversations', 'list-style') !== undefined
 const supportDefaultBlurVirtualBackground = getTalkConfig('local', 'call', 'blur-virtual-background') !== undefined
-const supportChatStyle = getTalkConfig('local', 'chat', 'style') !== undefined
+const supportLiveTranslation = getTalkConfig('local', 'call', 'live-translation') === true
 
 export default {
 	name: 'SettingsDialog',
 
 	components: {
+		IconTune,
 		IconFolderOpenOutline,
 		IconMicrophoneOutline,
+		AppearanceSettings,
+		LiveTranscriptionTargetLanguageSelect,
 		NcAppSettingsDialog,
 		NcAppSettingsSection,
 		NcButton,
@@ -206,20 +199,16 @@ export default {
 	setup() {
 		const actorStore = useActorStore()
 		const settingsStore = useSettingsStore()
-		const soundsStore = useSoundsStore()
 		const { customSettingsSections } = useCustomSettings()
 
 		return {
 			disableKeyboardShortcuts,
-			settingsUrl,
 			settingsStore,
-			soundsStore,
 			supportTypingStatus,
 			customSettingsSections,
 			supportStartWithoutMedia,
-			supportConversationsListStyle,
 			supportDefaultBlurVirtualBackground,
-			supportChatStyle,
+			supportLiveTranslation,
 			actorStore,
 		}
 	},
@@ -228,19 +217,12 @@ export default {
 		return {
 			showSettings: false,
 			attachmentFolderLoading: true,
-			chatAppearanceLoading: false,
-			appearanceLoading: false,
 			privacyLoading: false,
-			playSoundsLoading: false,
 			mediaLoading: false,
 		}
 	},
 
 	computed: {
-		shouldPlaySounds() {
-			return this.soundsStore.shouldPlaySounds
-		},
-
 		attachmentFolder() {
 			return this.settingsStore.attachmentFolder
 		},
@@ -261,16 +243,8 @@ export default {
 			return this.settingsStore.startWithoutMedia
 		},
 
-		conversationsListStyle() {
-			return this.settingsStore.conversationsListStyle !== CONVERSATION.LIST_STYLE.TWO_LINES
-		},
-
 		hideMediaSettings() {
 			return !this.settingsStore.showMediaSettings
-		},
-
-		chatSplitViewEnabled() {
-			return this.settingsStore.chatStyle === CHAT_STYLE.SPLIT
 		},
 	},
 
@@ -326,7 +300,6 @@ export default {
 			this.privacyLoading = true
 			try {
 				await this.settingsStore.updateReadStatusPrivacy(this.readStatusPrivacyIsPublic ? PRIVACY.PRIVATE : PRIVACY.PUBLIC)
-				showSuccess(t('spreed', 'Your privacy setting has been saved'))
 			} catch (exception) {
 				showError(t('spreed', 'Error while setting read status privacy'))
 			}
@@ -337,55 +310,16 @@ export default {
 			this.privacyLoading = true
 			try {
 				await this.settingsStore.updateTypingStatusPrivacy(this.typingStatusPrivacyIsPublic ? PRIVACY.PRIVATE : PRIVACY.PUBLIC)
-				showSuccess(t('spreed', 'Your privacy setting has been saved'))
 			} catch (exception) {
 				showError(t('spreed', 'Error while setting typing status privacy'))
 			}
 			this.privacyLoading = false
 		},
 
-		async toggleConversationsListStyle(value) {
-			this.appearanceLoading = true
-			try {
-				await this.settingsStore.updateConversationsListStyle(value ? CONVERSATION.LIST_STYLE.COMPACT : CONVERSATION.LIST_STYLE.TWO_LINES)
-				showSuccess(t('spreed', 'Your personal setting has been saved'))
-			} catch (exception) {
-				showError(t('spreed', 'Error while setting personal setting'))
-			}
-			this.appearanceLoading = false
-		},
-
-		async toggleChatStyle(value) {
-			this.chatAppearanceLoading = true
-			try {
-				await this.settingsStore.updateChatStyle(value ? CHAT_STYLE.SPLIT : CHAT_STYLE.UNIFIED)
-				showSuccess(t('spreed', 'Your personal setting has been saved'))
-			} catch (exception) {
-				showError(t('spreed', 'Error while setting personal setting'))
-			}
-			this.chatAppearanceLoading = false
-		},
-
-		async togglePlaySounds() {
-			this.playSoundsLoading = true
-			try {
-				try {
-					await this.soundsStore.setShouldPlaySounds(!this.shouldPlaySounds)
-				} catch (e) {
-					showError(t('spreed', 'Failed to save sounds setting'))
-				}
-				showSuccess(t('spreed', 'Sounds setting saved'))
-			} catch (exception) {
-				showError(t('spreed', 'Error while saving sounds setting'))
-			}
-			this.playSoundsLoading = false
-		},
-
 		async toggleStartWithoutMedia(value) {
 			this.mediaLoading = true
 			try {
 				await this.settingsStore.updateStartWithoutMedia(value)
-				showSuccess(t('spreed', 'Your default media state has been saved'))
 			} catch (exception) {
 				showError(t('spreed', 'Error while setting default media state'))
 			} finally {
@@ -399,6 +333,12 @@ export default {
 
 		setHideMediaSettings(newValue) {
 			this.settingsStore.setShowMediaSettings(!newValue)
+		},
+
+		async openAdvancedSettings() {
+			await spawnDialog(AdvancedAudioDialog, {
+				container: '#devices',
+			})
 		},
 
 		async setBlurVirtualBackgroundEnabled(value) {

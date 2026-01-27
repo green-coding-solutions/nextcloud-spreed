@@ -3,7 +3,7 @@
   - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends Participant | ParticipantSearchResult">
 import type { Ref } from 'vue'
 import type { Participant, ParticipantSearchResult } from '../../types/index.ts'
 
@@ -14,12 +14,15 @@ import AvatarWrapper from '../AvatarWrapper/AvatarWrapper.vue'
 import { AVATAR } from '../../constants.ts'
 
 const props = defineProps<{
-	participant: Participant | ParticipantSearchResult
+	participant: T
 }>()
-const emit = defineEmits(['update'])
 
-// Defines list of locked participants (can not be removed manually
-const lockedParticipants = inject<Ref<(Participant | ParticipantSearchResult)[]>>('lockedParticipants', ref([]))
+const emit = defineEmits<{
+	update: [participant: T]
+}>()
+
+// Defines list of locked participants (can not be removed manually)
+const lockedParticipants = inject<Ref<T[]>>('lockedParticipants', ref([]))
 
 const isLocked = computed(() => lockedParticipants.value.some((item) => {
 	if ('actorId' in props.participant) {
@@ -52,7 +55,7 @@ const removeLabel = computed(() => t('spreed', 'Remove participant {name}', { na
 	<NcChip
 		:text="computedName"
 		:aria-label-close="removeLabel"
-		:no-close="isLocked"
+		:noClose="isLocked"
 		@close="emit('update', participant)">
 		<template #icon>
 			<AvatarWrapper
@@ -61,8 +64,8 @@ const removeLabel = computed(() => t('spreed', 'Remove participant {name}', { na
 				:name="computedName"
 				:source="actorType"
 				:size="AVATAR.SIZE.EXTRA_SMALL"
-				disable-menu
-				disable-tooltip />
+				disableMenu
+				disableTooltip />
 		</template>
 	</NcChip>
 </template>

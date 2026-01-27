@@ -7,13 +7,13 @@
 	<div class="local-video-control-wrapper">
 		<NcButton
 			:title="videoButtonTitle"
-			:variant="variant"
+			:variant="videoStreamError ? 'error' : variant"
 			:aria-label="videoButtonAriaLabel"
 			:class="{
 				'no-video-available': !isVideoAvailable,
 				'video-control-button': showDevices,
 			}"
-			:disabled="!isVideoAllowed || resumeVideoAfterChange"
+			:disabled="resumeVideoAfterChange"
 			@click.stop="toggleVideo">
 			<template #icon>
 				<IconVideo v-if="showVideoOn || resumeVideoAfterChange" :size="20" />
@@ -23,7 +23,7 @@
 
 		<NcActions
 			v-if="showDevices"
-			:disabled="!isVideoAvailable || !isVideoAllowed"
+			:disabled="!isVideoAvailable || !isVideoAllowed || !!videoStreamError"
 			class="video-selector-button"
 			@open="updateDevices">
 			<template #icon>
@@ -35,11 +35,20 @@
 				:key="device.deviceId ?? 'none'"
 				class="video-selector__action"
 				type="radio"
-				:model-value="videoInputId"
+				:modelValue="videoInputId"
 				:value="device.deviceId"
 				:title="device.label"
 				@click="handleVideoInputIdChange(device.deviceId)">
 				{{ device.label }}
+			</NcActionButton>
+
+			<NcActionSeparator />
+			<NcActionButton
+				key="media-settings"
+				class="video-selector__action"
+				closeAfterClick
+				@click="emit('talk:media-settings:show')">
+				{{ t('spreed', 'Check devices') }}
 			</NcActionButton>
 		</NcActions>
 	</div>
@@ -53,6 +62,7 @@ import { ref } from 'vue'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionCaption from '@nextcloud/vue/components/NcActionCaption'
 import NcActions from '@nextcloud/vue/components/NcActions'
+import NcActionSeparator from '@nextcloud/vue/components/NcActionSeparator'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import IconChevronUp from 'vue-material-design-icons/ChevronUp.vue'
 import IconVideo from 'vue-material-design-icons/Video.vue' // Filled for better indication
@@ -67,6 +77,7 @@ export default {
 		NcActions,
 		NcActionButton,
 		NcActionCaption,
+		NcActionSeparator,
 		NcButton,
 		IconChevronUp,
 		IconVideo,
@@ -109,6 +120,7 @@ export default {
 		const {
 			devices,
 			videoInputId,
+			videoStreamError,
 			updateDevices,
 			updatePreferences,
 			subscribeToDevices,
@@ -121,6 +133,7 @@ export default {
 		return {
 			devices,
 			videoInputId,
+			videoStreamError,
 			updateDevices,
 			updatePreferences,
 			subscribeToDevices,
@@ -219,8 +232,10 @@ export default {
 
 	methods: {
 		t,
+		emit,
+
 		toggleVideo() {
-			if (!this.isVideoAvailable) {
+			if (!this.isVideoAllowed || !this.isVideoAvailable) {
 				emit('talk:media-settings:show')
 				return
 			}

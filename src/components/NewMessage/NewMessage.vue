@@ -4,7 +4,9 @@
 -->
 
 <template>
-	<div class="wrapper">
+	<div
+		class="wrapper"
+		:class="{ 'wrapper--narrow': isSidebar }">
 		<NewMessageTypingIndicator
 			v-if="showTypingStatus"
 			:token="token" />
@@ -26,31 +28,35 @@
 			<!-- Attachments menu -->
 			<NewMessageAttachments
 				v-if="showAttachmentsMenu"
+				class="new-message-form__attachments"
 				:token="token"
 				:disabled="disabled"
-				:can-upload-files="canUploadFiles"
-				:can-share-files="canShareFiles"
-				:can-create-poll="canCreatePoll"
-				:can-create-thread="canCreateThread"
-				@open-file-upload="openFileUploadWindow"
-				@create-thread="setCreateThread"
-				@handle-file-share="showFilePicker"
-				@update-new-file-dialog="updateNewFileDialog" />
+				:canUploadFiles="canUploadFiles"
+				:canShareFiles="canShareFiles"
+				:canCreatePoll="canCreatePoll"
+				:canCreateThread="canCreateThread"
+				@openFileUpload="openFileUploadWindow"
+				@createThread="setCreateThread"
+				@handleFileShare="showFilePicker"
+				@updateNewFileDialog="updateNewFileDialog" />
 
 			<!-- Input area -->
 			<div class="new-message-form__input">
 				<NewMessageAbsenceInfo
 					v-if="!dialog && userAbsence"
-					:user-absence="userAbsence"
-					:display-name="conversation.displayName" />
+					class="new-message-form__note-content"
+					:userAbsence="userAbsence"
+					:displayName="conversation.displayName" />
 
-				<NewMessageChatSummary v-if="!dialog && showChatSummary" />
+				<NewMessageChatSummary
+					v-if="!dialog && showChatSummary"
+					class="new-message-form__note-content" />
 
 				<div class="new-message-form__emoji-picker">
 					<NcEmojiPicker
 						v-if="!disabled"
-						keep-open
-						:set-return-focus="getContenteditable"
+						keepOpen
+						:setReturnFocus="getContenteditable"
 						@select="addEmoji">
 						<NcButton
 							:disabled="disabled"
@@ -73,11 +79,12 @@
 						</template>
 					</NcButton>
 				</div>
+
 				<div v-if="parentMessage || messageToEdit" class="new-message-form__quote">
 					<MessageQuote
 						:message="messageToEdit ?? parentMessage"
-						:can-cancel="!!parentMessage"
-						:edit-message="!!messageToEdit" />
+						:canCancel="!!parentMessage"
+						:editMessage="!!messageToEdit" />
 				</div>
 
 				<!-- scheduling message hint -->
@@ -104,6 +111,7 @@
 					class="new-message-form__hint"
 					type="warning"
 					:text="t('spreed', 'Adding a mention will only notify users who did not read the message.')" />
+
 				<NcTextField
 					v-if="threadCreating"
 					ref="threadTitleInputRef"
@@ -113,25 +121,26 @@
 					:disabled="disabled"
 					:error="!!errorTitle"
 					:title="errorTitle"
-					show-trailing-button
-					@trailing-button-click="setCreateThread(false)" />
+					showTrailingButton
+					@trailingButtonClick="setCreateThread(false)" />
+
 				<NcRichContenteditable
 					ref="richContenteditable"
 					:key="container"
 					v-model="text"
 					:class="{ 'new-message-form__input-rich--required': errorMessage }"
 					:title="errorMessage"
-					:auto-complete="autoComplete"
+					:autoComplete="autoComplete"
 					:disabled="disabled"
-					:user-data="userData"
-					:menu-container="containerElement"
+					:userData="userData"
+					:menuContainer="containerElement"
 					:placeholder="placeholderText"
 					:aria-label="placeholderText"
 					:dir="text ? 'auto' : undefined"
 					@keydown.esc="handleInputEsc"
 					@keydown.ctrl.up="handleEditLastMessage"
 					@keydown.meta.up="handleEditLastMessage"
-					@update:model-value="handleTyping"
+					@update:modelValue="handleTyping"
 					@paste="handlePastedFiles"
 					@focus="restoreSelectionRange"
 					@blur="preserveSelectionRange"
@@ -141,7 +150,7 @@
 			<!-- Silent chat -->
 			<NcActions
 				v-if="showSendActions"
-				force-menu
+				forceMenu
 				:primary="silentChat"
 				@close="submenu = null">
 				<template #icon>
@@ -151,18 +160,29 @@
 					<NcActionButton
 						v-if="supportScheduleMessages && !dialog"
 						key="action-schedule"
-						is-menu
+						isMenu
 						@click.stop="submenu = 'schedule'">
 						<template #icon>
 							<IconClockOutline :size="20" />
 						</template>
 						{{ t('spreed', 'Send later') }}
 					</NcActionButton>
+					<NcActionButton
+						v-if="isSidebar && showScheduledMessagesToggle"
+						type="checkbox"
+						:modelValue="showScheduledMessages"
+						closeAfterClick
+						@click="chatExtrasStore.setShowScheduledMessages(!showScheduledMessages)">
+						<template #icon>
+							<IconClockOutline :size="20" />
+						</template>
+						{{ t('spreed', 'Show scheduled messages') }}
+					</NcActionButton>
 
 					<NcActionButton
 						key="silent-send"
-						close-after-click
-						:model-value="silentChat"
+						closeAfterClick
+						:modelValue="silentChat"
 						:description="silentSendInfo"
 						@click="toggleSilentChat">
 						{{ silentSendLabel }}
@@ -189,7 +209,7 @@
 						v-for="option in getCustomDateOptions()"
 						:key="option.key"
 						:aria-label="option.ariaLabel"
-						close-after-click
+						closeAfterClick
 						@click.stop="chatExtrasStore.setScheduleMessageTime(option.timestamp)">
 						{{ option.label }}
 					</NcActionButton>
@@ -200,7 +220,7 @@
 						:min="new Date()"
 						:label="t('spreed', 'Choose a time')"
 						:step="300"
-						is-native-picker>
+						isNativePicker>
 						<template #icon>
 							<IconCalendarClockOutline :size="20" />
 						</template>
@@ -209,7 +229,7 @@
 					<NcActionButton
 						key="custom-time-submit"
 						:disabled="!customScheduleTimestamp"
-						close-after-click
+						closeAfterClick
 						@click.stop="chatExtrasStore.setScheduleMessageTime(customScheduleTimestamp.valueOf())">
 						<template #icon>
 							<IconCheck :size="20" />
@@ -220,7 +240,7 @@
 			</NcActions>
 
 			<NcButton
-				v-if="showScheduledMessagesToggle"
+				v-if="!isSidebar && showScheduledMessagesToggle"
 				:variant="showScheduledMessages ? 'secondary' : 'tertiary'"
 				:title="t('spreed', 'Show scheduled messages')"
 				@click="chatExtrasStore.setShowScheduledMessages(!showScheduledMessages)">
@@ -234,7 +254,7 @@
 				v-if="showAudioRecorder"
 				:disabled="disabled"
 				@recording="handleRecording"
-				@audio-file="handleAudioFile" />
+				@audioFile="handleAudioFile" />
 
 			<!-- Edit -->
 			<template v-else-if="messageToEdit">
@@ -296,7 +316,7 @@
 		<NewMessageNewFileDialog
 			v-if="showNewFileDialog !== -1"
 			:token="token"
-			:show-new-file-dialog="showNewFileDialog"
+			:showNewFileDialog="showNewFileDialog"
 			@dismiss="showNewFileDialog = -1" />
 	</div>
 </template>
@@ -307,7 +327,7 @@ import { getFilePickerBuilder } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
 import { useHotKey } from '@nextcloud/vue/composables/useHotKey'
 import debounce from 'debounce'
-import { nextTick, toRefs, useTemplateRef } from 'vue'
+import { inject, nextTick, toRefs, useTemplateRef } from 'vue'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionInput from '@nextcloud/vue/components/NcActionInput'
 import NcActions from '@nextcloud/vue/components/NcActions'
@@ -457,6 +477,8 @@ export default {
 
 		const threadTitleInputRef = useTemplateRef('threadTitleInputRef')
 
+		const isSidebar = inject('chatView:isSidebar', false)
+
 		return {
 			actorStore: useActorStore(),
 			chatExtrasStore: useChatExtrasStore(),
@@ -472,6 +494,7 @@ export default {
 			threadTitleInputRef,
 			createTemporaryMessage,
 			convertToUnix,
+			isSidebar,
 		}
 	},
 
@@ -660,6 +683,11 @@ export default {
 		},
 
 		showMentionEditHint() {
+			if (this.scheduleMessageTime) {
+				// Do not show hint for scheduled messages, as no notifications yet created
+				return false
+			}
+
 			const mentionPattern = /(^|\s)@/
 			return mentionPattern.test(this.chatEditInput)
 		},
@@ -1135,7 +1163,14 @@ export default {
 					throw new Error(t('files', 'Invalid path selected'))
 				}
 				this.focusInput()
-				this.$store.dispatch('shareFile', { token: this.token, path })
+
+				const talkMetaData = JSON.stringify(Object.assign(
+					this.threadId ? { threadId: this.threadId } : {},
+					this.parentMessage?.id ? { replyTo: this.parentMessage?.id } : {},
+				))
+				this.chatExtrasStore.removeParentIdToReply(this.token)
+
+				this.$store.dispatch('shareFile', { token: this.token, path, talkMetaData })
 			})
 		},
 
@@ -1374,11 +1409,36 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@use '../../assets/variables' as *;
+@use '../../assets/variables.scss' as *;
 
 .wrapper {
 	padding: calc(var(--default-grid-baseline) * 2);
 	min-height: calc(var(--default-clickable-area) + var(--default-grid-baseline) * 2);
+}
+
+.wrapper--narrow {
+	padding: var(--default-grid-baseline);
+
+	.new-message-form__input > .new-message-form__hint,
+	.new-message-form__input > .new-message-form__quote,
+	.new-message-form__input > .new-message-form__thread-title {
+		width: calc(var(--app-sidebar-width) - 2 * var(--default-grid-baseline));
+	}
+
+	.new-message-form__input > .new-message-form__note-content {
+		width: calc(var(--app-sidebar-width) - 2 * var(--default-grid-baseline));
+		margin-inline: 0 !important;
+	}
+
+	.new-message-form__attachments + .new-message-form__input > .new-message-form__hint,
+	.new-message-form__attachments + .new-message-form__input > .new-message-form__quote,
+	.new-message-form__attachments + .new-message-form__input > .new-message-form__thread-title {
+		margin-inline-start: calc(-1 * var(--default-clickable-area) - var(--default-grid-baseline));
+	}
+
+	.new-message-form__attachments + .new-message-form__input > .new-message-form__note-content {
+		margin-inline-start: calc(-1 * var(--default-clickable-area) - var(--default-grid-baseline)) !important;
+	}
 }
 
 .new-message-form {

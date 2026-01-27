@@ -13,6 +13,7 @@ import type {
 	UnifiedSearchResultEntry,
 } from '../../../types/index.ts'
 
+import { isCancel } from '@nextcloud/axios'
 import { showError } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
 import debounce from 'debounce'
@@ -37,13 +38,14 @@ import { useIsInCall } from '../../../composables/useIsInCall.js'
 import { ATTENDEE } from '../../../constants.ts'
 import { searchMessages } from '../../../services/coreService.ts'
 import { EventBus } from '../../../services/EventBus.ts'
-import CancelableRequest from '../../../utils/cancelableRequest.js'
+import CancelableRequest from '../../../utils/CancelableRequest.ts'
 
 const props = defineProps<{
 	isActive: boolean
 }>()
+
 const emit = defineEmits<{
-	(event: 'close'): void
+	close: []
 }>()
 
 const searchMessagesTab = ref<HTMLElement | null>(null)
@@ -180,7 +182,7 @@ async function fetchSearchResults(isNew = true): Promise<void> {
 		cancelSearchFn()
 		resetNavigation()
 
-		const { request, cancel } = CancelableRequest(searchMessages) as SearchMessageCancelableRequest
+		const { request, cancel } = CancelableRequest(searchMessages)
 		cancelSearchFn = cancel
 
 		if (isNew) {
@@ -234,7 +236,7 @@ async function fetchSearchResults(isNew = true): Promise<void> {
 			nextTick(() => initializeNavigation())
 		}
 	} catch (exception) {
-		if (CancelableRequest.isCancel(exception)) {
+		if (isCancel(exception)) {
 			return
 		}
 		console.error('Error searching for messages', exception)
@@ -257,8 +259,8 @@ watch([searchText, fromUser, sinceDate, untilDate], debounceFetchSearchResults)
 					<SearchBox
 						ref="searchBox"
 						v-model:value="searchText"
-						v-model:is-focused="isFocused"
-						:placeholder-text="t('spreed', 'Search messages …')" />
+						v-model:isFocused="isFocused"
+						:placeholderText="t('spreed', 'Search messages …')" />
 					<NcButton
 						v-model:pressed="searchDetailsOpened"
 						:aria-label="t('spreed', 'Search options')"
@@ -296,7 +298,7 @@ watch([searchText, fromUser, sinceDate, untilDate], debounceFetchSearchResults)
 								:max="new Date()"
 								:aria-label="t('spreed', 'Until')"
 								:label="t('spreed', 'Until')"
-								:minute-step="1" />
+								:minuteStep="1" />
 						</div>
 					</div>
 				</TransitionWrapper>
@@ -313,8 +315,8 @@ watch([searchText, fromUser, sinceDate, untilDate], debounceFetchSearchResults)
 								<NcAvatar
 									:size="24"
 									:user="fromUser.id"
-									:display-name="fromUser.displayName"
-									hide-status />
+									:displayName="fromUser.displayName"
+									hideStatus />
 							</template>
 						</NcChip>
 						<NcChip
@@ -344,11 +346,11 @@ watch([searchText, fromUser, sinceDate, untilDate], debounceFetchSearchResults)
 				<SearchMessageItem
 					v-for="item of searchResults"
 					:key="`message_${item.attributes.messageId}`"
-					:message-id="+item.attributes.messageId"
+					:messageId="+item.attributes.messageId"
 					:title="item.title"
 					:subline="item.subline"
-					:actor-id="item.attributes.actorId"
-					:actor-type="item.attributes.actorType"
+					:actorId="item.attributes.actorId"
+					:actorType="item.attributes.actorType"
 					:token="item.attributes.conversation"
 					:timestamp="+item.attributes.timestamp"
 					:to="item.to" />

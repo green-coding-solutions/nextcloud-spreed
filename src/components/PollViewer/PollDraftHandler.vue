@@ -9,7 +9,7 @@
 		:name="t('spreed', 'Poll drafts')"
 		:container="container"
 		size="normal"
-		close-on-click-outside
+		closeOnClickOutside
 		@update:open="emit('close')">
 		<EmptyView
 			v-if="!pollDrafts.length"
@@ -56,8 +56,9 @@ const props = defineProps<{
 	editorOpened?: boolean
 	container?: string
 }>()
+
 const emit = defineEmits<{
-	(event: 'close'): void
+	close: []
 }>()
 
 const pollsStore = usePollsStore()
@@ -89,7 +90,7 @@ function openPollEditor({ id, action }: { id: number | null, action?: string }) 
 	&__wrapper {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		grid-gap: var(--default-grid-baseline);
+		gap: var(--default-grid-baseline);
 	}
 
 	&__empty {

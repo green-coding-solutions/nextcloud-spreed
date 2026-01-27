@@ -5,6 +5,100 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 23.0.0-rc.1 – 2026-01-22
+### Changed
+- Update dependencies
+- Update translations
+
+### Fixed
+- fix(chat): Polishing of message bubbles
+  [#16760](https://github.com/nextcloud/spreed/pull/16760)
+  [#16763](https://github.com/nextcloud/spreed/pull/16763)
+- fix(chat): Polishing of scheduled messages
+  [#16764](https://github.com/nextcloud/spreed/pull/16764)
+  [#16790](https://github.com/nextcloud/spreed/pull/16790)
+- fix(chat): Fix chat infos in sidebar layout
+  [#16782](https://github.com/nextcloud/spreed/pull/16782)
+- fix(chat): Correctly post replies and threads when sharing files
+  [#16819](https://github.com/nextcloud/spreed/pull/16819)
+
+## 23.0.0-beta.2 – 2026-01-15
+### Added
+- Live translations in call
+
+### Changed
+- Update dependencies
+- Update translations
+- Bots: The `object.name` was set to an empty string for messages with attachments. This was fixed to be `'message'` as for normal messages without any attachments
+  [#16724](https://github.com/nextcloud/spreed/pull/16724)
+
+### Fixed
+- fix(chat): Allow getting a single message
+  [#16730](https://github.com/nextcloud/spreed/pull/16730)
+- fix(chat): Don't show chat messages of the old chat when switching to a new chat
+  [#16715](https://github.com/nextcloud/spreed/pull/16715)
+- fix(call): Allow selecting a media device after an error occurred
+  [#16699](https://github.com/nextcloud/spreed/pull/16699)
+- perf(shares): Improve performance for shares
+  [#16721](https://github.com/nextcloud/spreed/pull/16721)
+  [#16655](https://github.com/nextcloud/spreed/pull/16655)
+  [#16713](https://github.com/nextcloud/spreed/pull/16713)
+
+## 22.0.8 – 2026-01-15
+### Changed
+- Update dependencies
+- Update translations
+
+### Fixed
+- fix(chat): Allow getting a single message
+  [#16731](https://github.com/nextcloud/spreed/pull/16731)
+- fix(chat): Don't show chat messages of the old chat when switching to a new chat
+  [#16718](https://github.com/nextcloud/spreed/pull/16718)
+- fix(chat): Don't set the cursor to the end when someone reacts to a message while editing
+  [#16633](https://github.com/nextcloud/spreed/pull/16633)
+- fix(call): Allow selecting a media device after an error occurred
+  [#16701](https://github.com/nextcloud/spreed/pull/16701)
+- fix(call): Allow preparing media devices even when the user has no permissions yet
+  [#16682](https://github.com/nextcloud/spreed/pull/16682)
+- fix(call): Still block mobile clients when call end-to-end encryption is enabled
+  [#16674](https://github.com/nextcloud/spreed/pull/16674)
+
+## 21.1.8 – 2026-01-15
+### Changed
+- Update dependencies
+- Update translations
+
+### Fixed
+- fix(chat): Allow getting a single message
+  [#16732](https://github.com/nextcloud/spreed/pull/16732)
+- fix(call): Allow selecting a media device after an error occurred
+  [#16700](https://github.com/nextcloud/spreed/pull/16700)
+- fix(call): Still block mobile clients when call end-to-end encryption is enabled
+  [#16673](https://github.com/nextcloud/spreed/pull/16673)
+
+## 23.0.0-beta.1 – 2026-01-09
+### Added
+- Allow moderators to pin messages in a chat
+  [#3390](https://github.com/nextcloud/spreed/issues/3390)
+- Chat is now shown in split view by default
+  [#14944](https://github.com/nextcloud/spreed/issues/14944)
+- Allow users to schedule messages to send at a later time
+  [#3954](https://github.com/nextcloud/spreed/issues/3954)
+- Use hardware acceleration for background blurring when available
+  [#16072](https://github.com/nextcloud/spreed/issues/16072)
+- Allow participants to control noise suppression, echo cancellation and auto gain for their microphone
+  [#3252](https://github.com/nextcloud/spreed/issues/3252)
+- Relay chat messages via the High-performance backend to improve performance and scaling
+  [#624](https://github.com/nextcloud/spreed/issues/624)
+
+### Changed
+- Update dependencies
+- Update translations
+- Require Nextcloud 33 / Hub 26 Winter
+- Enable notifications in group conversations by default for new instances
+  [#16319](https://github.com/nextcloud/spreed/issues/16319)
+- Bots: The `object.name` was set to an empty string for messages with attachments. This was fixed to be `'message'` as for normal messages without any attachments.
+
 ## 22.0.7 – 2025-12-17
 ### Changed
 - Update dependencies

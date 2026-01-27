@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import axios from '@nextcloud/axios'
+import axios, { isCancel } from '@nextcloud/axios'
 import {
 	showError,
 	showWarning,
@@ -21,7 +21,7 @@ import { pullSignalingMessages } from '../services/signalingService.js'
 import store from '../store/index.js'
 import { useActorStore } from '../stores/actor.ts'
 import pinia from '../stores/pinia.ts'
-import CancelableRequest from './cancelableRequest.js'
+import CancelableRequest from './CancelableRequest.ts'
 import Encryption from './e2ee/encryption.js'
 import { convertToUnix } from './formattedTime.ts'
 import { messagePleaseTryToReload } from './talkDesktopUtils.ts'
@@ -542,7 +542,7 @@ Signaling.Internal.prototype._startPullingMessages = function() {
 		.catch(function(error) {
 			if (token !== this.currentRoomToken) {
 				// User navigated away in the meantime. Ignore
-			} else if (axios.isCancel(error)) {
+			} else if (isCancel(error)) {
 				console.debug('Pulling messages request was cancelled')
 			} else if (error?.response?.status === 409) {
 				// Participant joined a second time and this session was killed
@@ -675,7 +675,7 @@ Signaling.Standalone.prototype.connect = function() {
 	if (this.signalingConnectionError === null
 		&& this.signalingConnectionWarning === null) {
 		this.signalingConnectionTimeout = setTimeout(() => {
-			this.signalingConnectionWarning = showWarning(t('spreed', 'Establishing signaling connection is taking longer than expected …'), {
+			this.signalingConnectionWarning = showWarning(t('spreed', 'Connecting is taking longer than expected …'), {
 				timeout: TOAST_PERMANENT_TIMEOUT,
 			})
 		}, 2000)
@@ -731,7 +731,7 @@ Signaling.Standalone.prototype.connect = function() {
 			this.signalingConnectionWarning = null
 		}
 		if (this.signalingConnectionError === null) {
-			this.signalingConnectionError = showError(t('spreed', 'Failed to establish signaling connection. Retrying …'), {
+			this.signalingConnectionError = showError(t('spreed', 'Failed to connect. Retrying …'), {
 				timeout: TOAST_PERMANENT_TIMEOUT,
 			})
 		}
@@ -1069,7 +1069,7 @@ Signaling.Standalone.prototype.helloResponseReceived = function(data) {
 		this.helloResponseErrorCount++
 
 		if (this.signalingConnectionError === null && this.helloResponseErrorCount < 5) {
-			this.signalingConnectionError = showError(t('spreed', 'Failed to establish signaling connection. Retrying …'), {
+			this.signalingConnectionError = showError(t('spreed', 'Failed to connect. Retrying …'), {
 				timeout: TOAST_PERMANENT_TIMEOUT,
 			})
 		} else if (this.helloResponseErrorCount === 5) {
@@ -1079,7 +1079,7 @@ Signaling.Standalone.prototype.helloResponseReceived = function(data) {
 			if (this.signalingConnectionError) {
 				this.signalingConnectionError.hideToast()
 			}
-			this.signalingConnectionError = showError(t('spreed', 'Failed to establish signaling connection. Something might be wrong in the signaling server configuration'), {
+			this.signalingConnectionError = showError(t('spreed', 'Failed to connect. The signaling server may be set up incorrectly'), {
 				timeout: TOAST_PERMANENT_TIMEOUT,
 			})
 		}

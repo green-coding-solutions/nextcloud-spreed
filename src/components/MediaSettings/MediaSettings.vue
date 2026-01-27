@@ -8,7 +8,7 @@
 		:is="isDialog ? 'NcModal' : 'div'"
 		v-if="show"
 		:size="isDialog ? 'large' : undefined"
-		:label-id="isDialog ? dialogHeaderId : undefined"
+		:labelId="isDialog ? dialogHeaderId : undefined"
 		@close="close">
 		<div class="media-settings">
 			<h2
@@ -34,8 +34,8 @@
 					</p>
 					<NcCheckboxRadioSwitch
 						class="checkbox--warning"
-						:model-value="recordingConsentGiven"
-						@update:model-value="setRecordingConsentGiven">
+						:modelValue="recordingConsentGiven"
+						@update:modelValue="setRecordingConsentGiven">
 						{{ t('spreed', 'Give consent to the recording of this call') }}
 					</NcCheckboxRadioSwitch>
 				</template>
@@ -65,7 +65,7 @@
 						v-show="!showVideo"
 						class="preview__novideo">
 						<VideoBackground
-							:display-name="displayName"
+							:displayName="displayName"
 							:user="userId" />
 						<AvatarWrapper
 							:id="userId"
@@ -73,8 +73,8 @@
 							:name="displayName"
 							:source="actorStore.actorType"
 							:size="AVATAR.SIZE.EXTRA_LARGE"
-							disable-menu
-							disable-tooltip />
+							disableMenu
+							disableTooltip />
 					</div>
 
 					<!-- Audio and video toggles -->
@@ -89,17 +89,17 @@
 							@click="toggleAudio">
 							<template #icon>
 								<VolumeIndicator
-									:audio-preview-available="audioPreviewAvailable"
-									:audio-enabled="audioOn"
-									:current-volume="currentVolume"
-									:volume-threshold="currentThreshold"
-									overlay-muted-color="#888888" />
+									:audioPreviewAvailable="audioPreviewAvailable"
+									:audioEnabled="audioOn"
+									:currentVolume="currentVolume"
+									:volumeThreshold="currentThreshold"
+									overlayMutedColor="#888888" />
 							</template>
 						</NcButton>
 						<NcPopover
 							v-else
 							:title="t('spreed', 'Show more info')"
-							no-focus-trap>
+							noFocusTrap>
 							<template #trigger>
 								<NcButton
 									variant="error"
@@ -132,7 +132,7 @@
 						<NcPopover
 							v-else
 							:title="t('spreed', 'Show more info')"
-							no-focus-trap>
+							noFocusTrap>
 							<template #trigger>
 								<NcButton
 									variant="error"
@@ -157,34 +157,43 @@
 							<MediaDevicesSelector
 								kind="audioinput"
 								:devices="devices"
-								:device-id="audioInputId"
+								:deviceId="audioInputId"
 								@refresh="updateDevices"
-								@update:device-id="handleAudioInputIdChange" />
+								@update:deviceId="handleAudioInputIdChange" />
 							<MediaDevicesSelector
 								kind="videoinput"
 								:devices="devices"
-								:device-id="videoInputId"
+								:deviceId="videoInputId"
 								@refresh="updateDevices"
-								@update:device-id="handleVideoInputIdChange" />
+								@update:deviceId="handleVideoInputIdChange" />
 							<MediaDevicesSelector
 								v-if="audioOutputSupported"
 								kind="audiooutput"
 								:devices="devices"
-								:device-id="audioOutputId"
+								:deviceId="audioOutputId"
 								@refresh="updateDevices"
-								@update:device-id="handleAudioOutputIdChange">
-								<template #extra-action>
-									<MediaDevicesSpeakerTest :disabled="audioStreamError" />
+								@update:deviceId="handleAudioOutputIdChange">
+								<template #extraAction>
+									<MediaDevicesSpeakerTest :disabled="!!audioStreamError" />
 								</template>
 							</MediaDevicesSelector>
+							<NcButton
+								variant="tertiary"
+								wide
+								@click="openAdvancedSettings">
+								<template #icon>
+									<IconTune :size="20" />
+								</template>
+								{{ t('spreed', 'Microphone settings') }}
+							</NcButton>
 						</template>
 
 						<template #tab-panel:backgrounds>
 							<VideoBackgroundEditor
 								class="media-settings__tab"
 								:token="token"
-								:skip-blur-virtual-background="skipBlurVirtualBackground"
-								@update-background="handleUpdateVirtualBackground" />
+								:skipBlurVirtualBackground="skipBlurVirtualBackground"
+								@updateBackground="handleUpdateVirtualBackground" />
 						</template>
 					</MediaSettingsTabs>
 
@@ -203,7 +212,7 @@
 						v-if="showNotifyCallOption"
 						v-model="notifyCall"
 						class="checkbox"
-						@update:model-value="setNotifyCall">
+						@update:modelValue="setNotifyCall">
 						{{ t('spreed', 'Notify all participants about this call') }}
 					</NcCheckboxRadioSwitch>
 
@@ -217,11 +226,11 @@
 					<CallButton
 						v-else-if="isBeforeJoinCall"
 						class="action-button"
-						is-media-settings
-						:is-recording-from-start="isRecordingFromStart"
+						isMediaSettings
+						:isRecordingFromStart="isRecordingFromStart"
 						:disabled="disabledCallButton"
-						:recording-consent-given="recordingConsentGiven"
-						:silent-call="!notifyCall" />
+						:recordingConsentGiven="recordingConsentGiven"
+						:silentCall="!notifyCall" />
 				</div>
 			</div>
 		</div>
@@ -229,10 +238,10 @@
 </template>
 
 <script>
-import { showError, showSuccess } from '@nextcloud/dialogs'
-import { emit, subscribe, unsubscribe } from '@nextcloud/event-bus'
+import { subscribe, unsubscribe } from '@nextcloud/event-bus'
 import { t } from '@nextcloud/l10n'
 import { useIsMobile } from '@nextcloud/vue/composables/useIsMobile'
+import { spawnDialog } from '@nextcloud/vue/functions/dialog'
 import { computed, h, markRaw, ref, useId } from 'vue'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActions from '@nextcloud/vue/components/NcActions'
@@ -244,6 +253,7 @@ import NcNoteCard from '@nextcloud/vue/components/NcNoteCard'
 import NcPopover from '@nextcloud/vue/components/NcPopover'
 import IconCogOutline from 'vue-material-design-icons/CogOutline.vue'
 import IconReflectHorizontal from 'vue-material-design-icons/ReflectHorizontal.vue'
+import IconTune from 'vue-material-design-icons/Tune.vue'
 import IconVideo from 'vue-material-design-icons/Video.vue' // Filled for better indication
 import IconVideoOffOutline from 'vue-material-design-icons/VideoOffOutline.vue'
 import AvatarWrapper from '../AvatarWrapper/AvatarWrapper.vue'
@@ -251,6 +261,7 @@ import VideoBackground from '../CallView/shared/VideoBackground.vue'
 import SetGuestUsername from '../SetGuestUsername.vue'
 import CallButton from '../TopBar/CallButton.vue'
 import VolumeIndicator from '../UIShared/VolumeIndicator.vue'
+import AdvancedAudioDialog from './AdvancedAudioDialog.vue'
 import MediaDevicesSelector from './MediaDevicesSelector.vue'
 import MediaDevicesSpeakerTest from './MediaDevicesSpeakerTest.vue'
 import MediaSettingsTabs from './MediaSettingsTabs.vue'
@@ -294,6 +305,7 @@ export default {
 		SetGuestUsername,
 		// Icons
 		IconReflectHorizontal,
+		IconTune,
 		IconVideo,
 		IconVideoOffOutline,
 	},
@@ -331,6 +343,7 @@ export default {
 			audioOutputId,
 			videoInputId,
 			audioOutputSupported,
+			updateAudioStream,
 			subscribeToDevices,
 			unsubscribeFromDevices,
 			audioStreamError,
@@ -371,6 +384,7 @@ export default {
 			audioOutputId,
 			videoInputId,
 			audioOutputSupported,
+			updateAudioStream,
 			subscribeToDevices,
 			unsubscribeFromDevices,
 			registerVideoElement,
@@ -457,10 +471,12 @@ export default {
 		},
 
 		isCurrentlyRecording() {
-			return [CALL.RECORDING.VIDEO_STARTING,
+			return [
+				CALL.RECORDING.VIDEO_STARTING,
 				CALL.RECORDING.AUDIO_STARTING,
 				CALL.RECORDING.VIDEO,
-				CALL.RECORDING.AUDIO].includes(this.conversation.callRecording)
+				CALL.RECORDING.AUDIO,
+			].includes(this.conversation.callRecording)
 		},
 
 		canFullModerate() {
@@ -889,16 +905,10 @@ export default {
 			this.updatePreferences('videoinput')
 		},
 
-		async toggleStartWithoutMedia(value) {
-			this.mediaLoading = true
-			try {
-				await this.settingsStore.updateStartWithoutMedia(value)
-				showSuccess(t('spreed', 'Your default media state has been saved'))
-			} catch (exception) {
-				showError(t('spreed', 'Error while setting default media state'))
-			} finally {
-				this.mediaLoading = false
-			}
+		async openAdvancedSettings() {
+			await spawnDialog(AdvancedAudioDialog, {
+				container: '.media-settings__settings',
+			})
 		},
 
 		async setBlurVirtualBackgroundEnabled(value) {

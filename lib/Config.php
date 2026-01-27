@@ -242,6 +242,15 @@ class Config {
 		);
 	}
 
+	public function getLiveTranscriptionTargetLanguageId(?string $userId = null): string {
+		return $this->config->getUserValue(
+			$userId,
+			'spreed',
+			UserPreference::LIVE_TRANSCRIPTION_TARGET_LANGUAGE_ID,
+			''
+		);
+	}
+
 	public function isDisabledForUser(IUser $user): bool {
 		$allowedGroups = $this->getAllowedTalkGroupIds();
 		if (empty($allowedGroups)) {
@@ -533,7 +542,7 @@ class Config {
 
 		if (str_starts_with($alg, 'ES')) {
 			$privKey = openssl_pkey_new([
-				'curve_name' => 'prime256v1',
+				'curve_name' => $alg === 'ES384' ? 'secp384r1' : 'prime256v1',
 				'private_key_bits' => 2048,
 				'private_key_type' => OPENSSL_KEYTYPE_EC,
 			]);

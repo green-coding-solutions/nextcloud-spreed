@@ -54,7 +54,7 @@ const props = defineProps<NcDialogProps & {
 }>()
 
 const emit = defineEmits<{
-	(event: 'close', value?: unknown): void
+	close: [value?: unknown]
 }>()
 
 const inputValue = ref(props.inputProps?.value ?? '')
@@ -100,7 +100,7 @@ function onSubmit(value: string) {
 				v-model="inputValue"
 				:label="inputProps.label"
 				:disabled="inputProps.disabled"
-				:show-trailing-button="inputProps.showTrailingButton"
+				:showTrailingButton="inputProps.showTrailingButton"
 				@keydown.enter="onSubmit(inputValue)" />
 		</template>
 	</NcDialog>

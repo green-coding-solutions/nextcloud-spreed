@@ -14,9 +14,9 @@
 				type="text"
 				class="set-contacts__form-input"
 				:label="textFieldLabel"
-				:show-trailing-button="isSearching"
-				:trailing-button-label="cancelSearchLabel"
-				@trailing-button-click="abortSearch"
+				:showTrailingButton="isSearching"
+				:trailingButtonLabel="cancelSearchLabel"
+				@trailingButtonClick="abortSearch"
 				@input="handleInput">
 				<template #icon>
 					<Magnify :size="20" />
@@ -49,24 +49,25 @@
 		<!-- Search results -->
 		<SelectPhoneNumber
 			v-if="canModerateSipDialOut"
-			v-model:participant-phone-item="participantPhoneItem"
+			v-model:participantPhoneItem="participantPhoneItem"
 			:name="t('spreed', 'Add a phone number')"
 			:value="searchText"
 			@select="addParticipantPhone" />
 		<ParticipantsSearchResults
-			:search-results="searchResults"
-			:contacts-loading="contactsLoading"
-			:no-results="noResults"
+			:searchResults="searchResults"
+			:contactsLoading="contactsLoading"
+			:noResults="noResults"
 			scrollable
-			:show-search-hints="!onlyUsers"
+			:showSearchHints="!onlyUsers"
 			:token="token"
-			:only-users="onlyUsers"
+			:onlyUsers="onlyUsers"
 			@click="updateSelectedParticipants"
-			@click-search-hint="focusInput" />
+			@clickSearchHint="focusInput" />
 	</div>
 </template>
 
 <script>
+import { isCancel } from '@nextcloud/axios'
 import { showError } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
 import { vIntersectionObserver as IntersectionObserver } from '@vueuse/components'
@@ -83,7 +84,7 @@ import TransitionWrapper from '../UIShared/TransitionWrapper.vue'
 import { useArrowNavigation } from '../../composables/useArrowNavigation.js'
 import { SHARE } from '../../constants.ts'
 import { autocompleteQuery } from '../../services/coreService.ts'
-import CancelableRequest from '../../utils/cancelableRequest.js'
+import CancelableRequest from '../../utils/CancelableRequest.ts'
 
 export default {
 	name: 'NewConversationContactsPage',
@@ -238,7 +239,7 @@ export default {
 					this.initializeNavigation()
 				})
 			} catch (exception) {
-				if (CancelableRequest.isCancel(exception)) {
+				if (isCancel(exception)) {
 					return
 				}
 				console.error(exception)

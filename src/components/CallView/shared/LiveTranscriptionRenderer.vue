@@ -14,7 +14,7 @@
 			:token="token"
 			:model="item.model"
 			:chunks="item.chunks"
-			:right-to-left="item.rightToLeft" />
+			:rightToLeft="item.rightToLeft" />
 	</div>
 </template>
 
@@ -112,6 +112,15 @@ export default {
 			}
 
 			return liveTranscriptionLanguages
+		},
+
+		liveTranscriptionTargetLanguages() {
+			const liveTranscriptionTargetLanguages = this.liveTranscriptionStore.getLiveTranscriptionTargetLanguages()
+			if (!liveTranscriptionTargetLanguages) {
+				return {}
+			}
+
+			return liveTranscriptionTargetLanguages
 		},
 	},
 
@@ -219,7 +228,7 @@ export default {
 		handleTranscript(model: CallParticipantModel, message: string, languageId: string, final: boolean) {
 			let lastTranscriptBlock = this.transcriptBlocks.at(-1)
 
-			const messageIsRightToLeft = this.liveTranscriptionLanguages[languageId]?.metadata.rtl || false
+			const messageIsRightToLeft = this.liveTranscriptionLanguages[languageId]?.metadata.rtl || this.liveTranscriptionTargetLanguages[languageId]?.metadata.rtl || false
 
 			if (lastTranscriptBlock?.model.attributes.peerId !== model.attributes.peerId
 				|| lastTranscriptBlock?.rightToLeft !== messageIsRightToLeft) {

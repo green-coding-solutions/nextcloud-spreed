@@ -10,7 +10,7 @@ import type {
 	UserProfileData,
 } from '../../types/index.ts'
 
-import { t } from '@nextcloud/l10n'
+import { n, t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { useIsDarkTheme } from '@nextcloud/vue/composables/useIsDarkTheme'
 import { computed, ref, watch } from 'vue'
@@ -23,6 +23,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import IconAccountOutline from 'vue-material-design-icons/AccountOutline.vue'
 import IconArrowLeft from 'vue-material-design-icons/ArrowLeft.vue'
 import IconClockOutline from 'vue-material-design-icons/ClockOutline.vue'
+import IconDeleteClockOutline from 'vue-material-design-icons/DeleteClockOutline.vue'
 import IconMagnify from 'vue-material-design-icons/Magnify.vue'
 import IconOfficeBuildingOutline from 'vue-material-design-icons/OfficeBuildingOutline.vue'
 import CalendarEventSmall from '../UIShared/CalendarEventSmall.vue'
@@ -52,8 +53,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-	(event: 'update:state', value: SidebarContentState): void
-	(event: 'update:mode', value: 'compact' | 'preview' | 'full'): void
+	'update:state': [value: SidebarContentState]
+	'update:mode': [value: 'compact' | 'preview' | 'full']
 }>()
 
 const supportsAvatar = hasTalkFeature('local', 'avatar')
@@ -79,6 +80,25 @@ const profileActions = computed<UserProfileData['actions']>(() => {
 		return []
 	}
 	return profileInfo.value.actions.filter((action) => action.id !== 'talk')
+})
+
+const isMessageExpirationSet = computed(() => {
+	return conversation.value.messageExpiration > 0
+})
+
+const defaultExpirationOptions: Record<number, string> = {
+	3600: n('spreed', '%n hour', '%n hours', 1),
+	28800: n('spreed', '%n hour', '%n hours', 8),
+	86400: n('spreed', '%n day', '%n days', 1),
+	604800: n('spreed', '%n week', '%n weeks', 1),
+	2419200: n('spreed', '%n week', '%n weeks', 4),
+	0: t('spreed', 'Off'),
+}
+
+const messageExpirationDuration = computed(() => {
+	const { messageExpiration } = conversation.value
+
+	return defaultExpirationOptions[messageExpiration] ?? t('spreed', 'Custom expiration time')
 })
 
 const sidebarTitle = computed(() => {
@@ -118,11 +138,19 @@ const avatarUrl = computed(() => {
 })
 
 const profileInformation = computed(() => {
-	if (!profileInfo.value) {
-		return []
+	const fields = []
+
+	if (isMessageExpirationSet.value) {
+		fields.push({
+			key: 'expiration',
+			icon: IconDeleteClockOutline,
+			label: t('spreed', 'Message expiration set: {duration}', { duration: messageExpirationDuration.value }),
+		})
 	}
 
-	const fields = []
+	if (!profileInfo.value) {
+		return fields
+	}
 
 	if (profileInfo.value.role || profileInfo.value.pronouns) {
 		fields.push({
@@ -209,14 +237,14 @@ function handleHeaderClick() {
 		:class="{ ['content--' + mode]: state === 'default' }">
 		<template v-if="state === 'default'">
 			<div v-if="isUser" class="content__actions">
-				<NcActions v-if="profileActions.length" force-menu>
+				<NcActions v-if="profileActions.length" forceMenu>
 					<NcActionLink
 						v-for="action in profileActions"
 						:key="action.id"
 						class="content__profile-action"
 						:icon="action.icon"
 						:href="action.target"
-						close-after-click>
+						closeAfterClick>
 						{{ action.title }}
 					</NcActionLink>
 				</NcActions>
@@ -255,7 +283,7 @@ function handleHeaderClick() {
 						:title="sidebarTitle"
 						@click="handleHeaderClick" />
 					<div
-						v-if="mode !== 'compact' && profileInfo"
+						v-if="mode !== 'compact'"
 						class="content__info">
 						<span
 							v-for="row in profileInformation"
@@ -265,7 +293,7 @@ function handleHeaderClick() {
 							{{ row.label }}
 						</span>
 						<LocalTime
-							v-if="profileInfo.timezone"
+							v-if="profileInfo?.timezone"
 							class="content__info-row"
 							:timezone="profileInfo.timezone">
 							<template #icon>

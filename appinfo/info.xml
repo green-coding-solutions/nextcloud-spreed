@@ -18,7 +18,7 @@
 * 🌉 **Sync with other chat solutions** With [Matterbridge](https://github.com/42wim/matterbridge/) being integrated in Talk, you can easily sync a lot of other chat solutions to Nextcloud Talk and vice-versa.
 ]]></description>
 
-	<version>23.0.0-dev.4</version>
+	<version>24.0.0-dev.1</version>
 	<licence>agpl</licence>
 
 	<author>Anna Larch</author>
@@ -62,7 +62,7 @@
 	<screenshot>https://raw.githubusercontent.com/nextcloud/spreed/main/docs/video-verfication.png</screenshot>
 
 	<dependencies>
-		<nextcloud min-version="33" max-version="33" />
+		<nextcloud min-version="34" max-version="34" />
 	</dependencies>
 
 	<background-jobs>
@@ -89,6 +89,7 @@
 			<step>OCA\Talk\Migration\ClearResourceAccessCache</step>
 			<step>OCA\Talk\Migration\CacheUserDisplayNames</step>
 			<step>OCA\Talk\Migration\FixLastReadMessageZero</step>
+			<step>OCA\Talk\Migration\RegenerateSignalingKeys</step>
 		</post-migration>
 	</repair-steps>
 
@@ -166,4 +167,10 @@
 			<plugin type="collaborator-search" share-type="SHARE_TYPE_ROOM">OCA\Talk\Collaboration\Collaborators\RoomPlugin</plugin>
 		</plugins>
 	</collaboration>
+
+	<openmetrics>
+		<exporter>OCA\Talk\OpenMetrics\ActiveCalls</exporter>
+		<exporter>OCA\Talk\OpenMetrics\InCallSessions</exporter>
+	</openmetrics>
+
 </info>

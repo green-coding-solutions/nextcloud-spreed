@@ -22,10 +22,12 @@ import IconArrowLeft from 'vue-material-design-icons/ArrowLeft.vue'
 import IconCalendarClockOutline from 'vue-material-design-icons/CalendarClockOutline.vue'
 import IconCheck from 'vue-material-design-icons/Check.vue'
 import IconDotsHorizontal from 'vue-material-design-icons/DotsHorizontal.vue'
+import IconForumOutline from 'vue-material-design-icons/ForumOutline.vue'
 import IconPencilOutline from 'vue-material-design-icons/PencilOutline.vue'
 import IconSendOutline from 'vue-material-design-icons/SendOutline.vue'
 import IconSendVariantClockOutline from 'vue-material-design-icons/SendVariantClockOutline.vue'
 import IconTrashCanOutline from 'vue-material-design-icons/TrashCanOutline.vue'
+import { useGetThreadId } from '../../../../../composables/useGetThreadId.ts'
 import { useTemporaryMessage } from '../../../../../composables/useTemporaryMessage.ts'
 import { EventBus } from '../../../../../services/EventBus.ts'
 import { useChatExtrasStore } from '../../../../../stores/chatExtras.ts'
@@ -38,8 +40,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-	(event: 'update:isActionMenuOpen', value: boolean): void
-	(event: 'edit'): void
+	'update:isActionMenuOpen': [value: boolean]
+	edit: []
 }>()
 
 const getMessagesListScroller = inject('getMessagesListScroller', () => undefined)
@@ -47,11 +49,14 @@ const getMessagesListScroller = inject('getMessagesListScroller', () => undefine
 const router = useRouter()
 const chatExtrasStore = useChatExtrasStore()
 const vuexStore = useStore()
+const threadId = useGetThreadId()
 
 const { createTemporaryMessage } = useTemporaryMessage()
 
 const submenu = ref<'schedule' | null>(null)
 const customScheduleTimestamp = ref(new Date(props.message.timestamp * 1000))
+
+const isThreadReply = computed(() => (props.message.threadId ?? 0) > 0)
 
 const messageDateTime = computed(() => {
 	return formatDateTime(props.message.timestamp * 1000, 'shortDateWithTime')
@@ -94,7 +99,7 @@ async function handleSubmit() {
 		silent: props.message.silent,
 	}
 
-	if ((props.message.threadId ?? 0) > 0) {
+	if (isThreadReply.value) {
 		temporaryMessagePayload.threadId = props.message.threadId
 		temporaryMessagePayload.isThread = true
 	}
@@ -148,10 +153,10 @@ function onMenuClose() {
 		</NcButton>
 		<NcActions
 			v-else
-			force-menu
+			forceMenu
 			open
 			placement="bottom-end"
-			:boundaries-element="getMessagesListScroller()"
+			:boundariesElement="getMessagesListScroller()"
 			@close="onMenuClose">
 			<template v-if="submenu === null">
 				<!-- Message timestamp -->
@@ -164,7 +169,7 @@ function onMenuClose() {
 
 				<NcActionButton
 					key="set-schedule-menu"
-					is-menu
+					isMenu
 					@click.stop="submenu = 'schedule'">
 					<template #icon>
 						<IconAlarm :size="20" />
@@ -173,7 +178,7 @@ function onMenuClose() {
 				</NcActionButton>
 				<NcActionButton
 					key="send-message"
-					close-after-click
+					closeAfterClick
 					@click.stop="handleSubmit">
 					<template #icon>
 						<IconSendOutline :size="20" />
@@ -181,11 +186,23 @@ function onMenuClose() {
 					{{ t('spreed', 'Send now') }}
 				</NcActionButton>
 
+				<template v-if="isThreadReply">
+					<NcActionSeparator />
+					<NcActionButton
+						closeAfterClick
+						@click="threadId = message.threadId!">
+						<template #icon>
+							<IconForumOutline :size="20" />
+						</template>
+						{{ t('spreed', 'Go to thread') }}
+					</NcActionButton>
+				</template>
+
 				<NcActionSeparator />
 
 				<NcActionButton
 					key="edit-message"
-					close-after-click
+					closeAfterClick
 					@click.stop="handleEdit">
 					<template #icon>
 						<IconPencilOutline :size="20" />
@@ -194,7 +211,7 @@ function onMenuClose() {
 				</NcActionButton>
 				<NcActionButton
 					key="delete-message"
-					close-after-click
+					closeAfterClick
 					@click.stop="handleDelete">
 					<template #icon>
 						<IconTrashCanOutline :size="20" />
@@ -220,7 +237,7 @@ function onMenuClose() {
 					v-for="option in getCustomDateOptions()"
 					:key="option.key"
 					:aria-label="option.ariaLabel"
-					close-after-click
+					closeAfterClick
 					@click.stop="handleReschedule(option.timestamp)">
 					{{ option.label }}
 				</NcActionButton>
@@ -231,7 +248,7 @@ function onMenuClose() {
 					:min="new Date()"
 					:label="t('spreed', 'Choose a time')"
 					:step="300"
-					is-native-picker>
+					isNativePicker>
 					<template #icon>
 						<IconCalendarClockOutline :size="20" />
 					</template>
@@ -240,7 +257,7 @@ function onMenuClose() {
 				<NcActionButton
 					key="custom-time-submit"
 					:disabled="!customScheduleTimestamp"
-					close-after-click
+					closeAfterClick
 					@click.stop="handleReschedule(customScheduleTimestamp.valueOf())">
 					<template #icon>
 						<IconCheck :size="20" />

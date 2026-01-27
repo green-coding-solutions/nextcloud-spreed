@@ -37,15 +37,12 @@ import TransitionWrapper from './UIShared/TransitionWrapper.vue'
 import { ATTENDEE, CONVERSATION } from '../constants.ts'
 import { hasTalkFeature } from '../services/CapabilitiesManager.ts'
 import { useGroupwareStore } from '../stores/groupware.ts'
-import { convertToUnix, ONE_HOUR_IN_MS } from '../utils/formattedTime.ts'
+import { convertToUnix, formatDateTime, getDiffInDays, ONE_HOUR_IN_MS } from '../utils/formattedTime.ts'
 import { getDisplayNameWithFallback } from '../utils/getDisplayName.ts'
 
 const props = defineProps<{
 	token: string
 	container?: string
-}>()
-const emit = defineEmits<{
-	(event: 'close'): void
 }>()
 
 const hideTriggers = (triggers: string[]) => [...triggers, 'click']
@@ -75,6 +72,28 @@ const upcomingEvents = computed(() => {
 
 			return { ...event, start, color, href: event.calendarAppUrl ?? undefined }
 		})
+})
+
+const upcomingEventTime = computed(() => {
+	const eventStart = upcomingEvents.value[0]!.start
+
+	if (typeof eventStart === 'string') {
+		// Now
+		return eventStart
+	}
+
+	const diffInDays = getDiffInDays(eventStart)
+
+	if (diffInDays === 0) {
+		// Today
+		return formatDateTime(eventStart, 'shortTime')
+	} else if (diffInDays < 7) {
+		// Within a week
+		return formatDateTime(eventStart, 'shortWeekdayWithTime')
+	}
+
+	const isSameYear = new Date(eventStart).getFullYear() === new Date().getFullYear()
+	return formatDateTime(eventStart, isSameYear ? 'shortDateSameYear' : 'shortDate')
 })
 
 type CalendarOption = { value: string, label: string, color: string }
@@ -341,22 +360,22 @@ async function submitNewMeeting() {
 	<div v-if="conversation">
 		<NcPopover
 			:container="container"
-			:popper-hide-triggers="hideTriggers"
-			:no-focus-trap="!canScheduleMeeting && upcomingEvents.length === 0"
-			popup-role="dialog">
+			:popperHideTriggers="hideTriggers"
+			:noFocusTrap="!canScheduleMeeting && upcomingEvents.length === 0"
+			popupRole="dialog">
 			<template #trigger>
 				<NcButton
 					class="upcoming-meeting"
 					:title="t('spreed', 'Upcoming meetings')"
 					:aria-label="t('spreed', 'Upcoming meetings')">
-					<template #icon>
-						<IconCalendarBlankOutline :size="20" />
-					</template>
 					<template v-if="upcomingEvents[0] && !isMobile" #default>
-						<span class="upcoming-meeting__header">
-							{{ t('spreed', 'Next meeting') }}
+						{{ t('spreed', 'Meeting') }}
+						<span class="upcoming-meeting__time">
+							{{ upcomingEventTime }}
 						</span>
-						<StaticDateTime :time="upcomingEvents[0].start" calendar />
+					</template>
+					<template v-else #icon>
+						<IconCalendarBlankOutline :size="20" />
 					</template>
 				</NcButton>
 			</template>
@@ -370,7 +389,7 @@ async function submitNewMeeting() {
 							:start="event.start"
 							:href="event.href"
 							:color="event.color"
-							:is-recurring="!!event.recurrenceId" />
+							:isRecurring="!!event.recurrenceId" />
 					</ul>
 				</template>
 				<NcEmptyContent v-else class="calendar-events__empty-content">
@@ -401,17 +420,17 @@ async function submitNewMeeting() {
 				class="calendar-meeting"
 				:name="t('spreed', 'Schedule a meeting')"
 				size="normal"
-				close-on-click-outside
+				closeOnClickOutside
 				:container="container">
 				<NcTextField
 					v-model="newMeetingTitle"
 					:label="t('spreed', 'Meeting title')"
-					label-visible />
+					labelVisible />
 				<NcTextArea
 					v-model="newMeetingDescription"
 					:label="t('spreed', 'Description')"
 					resize="vertical"
-					label-visible />
+					labelVisible />
 				<div class="calendar-meeting__flex-wrapper">
 					<NcDateTimePickerNative
 						id="schedule_meeting_input"
@@ -434,7 +453,7 @@ async function submitNewMeeting() {
 					id="schedule_meeting_select"
 					v-model="selectedCalendar"
 					:options="calendarOptions"
-					:input-label="t('spreed', 'Calendar')">
+					:inputLabel="t('spreed', 'Calendar')">
 					<template #selected-option="option">
 						<span class="calendar-badge" :style="{ backgroundColor: option.color }" />
 						{{ option.label }}
@@ -457,7 +476,7 @@ async function submitNewMeeting() {
 					{{ t('spreed', 'No other participants to send invitations to.') }}
 				</p>
 				<template v-else>
-					<NcCheckboxRadioSwitch v-model="selectAll" @update:model-value="toggleAll">
+					<NcCheckboxRadioSwitch v-model="selectAll" @update:modelValue="toggleAll">
 						{{ inviteLabel }}
 					</NcCheckboxRadioSwitch>
 					<NcButton v-if="!isOneToOneConversation && !selectAll" variant="tertiary" @click="isSelectorOpen = true">
@@ -491,14 +510,14 @@ async function submitNewMeeting() {
 				v-model:open="isSelectorOpen"
 				:name="t('spreed', 'Add attendees')"
 				class="calendar-meeting"
-				close-on-click-outside
+				closeOnClickOutside
 				container="#calendar-meeting">
 				<SearchBox
 					v-model:value="searchText"
 					class="calendar-meeting__searchbox"
-					is-focused
-					:placeholder-text="t('spreed', 'Search participants')"
-					@abort-search="searchText = ''" />
+					isFocused
+					:placeholderText="t('spreed', 'Search participants')"
+					@abortSearch="searchText = ''" />
 				<!-- Selected results -->
 				<TransitionWrapper
 					v-if="selectedAttendeeIds.length"
@@ -651,19 +670,8 @@ async function submitNewMeeting() {
 }
 
 .upcoming-meeting {
-	// Overwrite default NcButton styles
-	:deep(.button-vue__text) {
-		padding-block: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		line-height: 20px;
+	&__time {
 		font-weight: 400;
-	}
-
-	&__header {
-		font-weight: 500;
 	}
 }
 

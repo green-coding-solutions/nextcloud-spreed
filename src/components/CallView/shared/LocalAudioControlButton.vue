@@ -8,29 +8,29 @@
 		<NcPopover
 			ref="popover"
 			:boundary="boundaryElement"
-			:show-triggers="[]"
-			:hide-triggers="['click']"
-			:auto-hide="false"
-			no-focus-trap
+			:showTriggers="[]"
+			:hideTriggers="['click']"
+			:autoHide="false"
+			noFocusTrap
 			:shown="popupShown">
 			<template #trigger>
 				<NcButton
 					:title="audioButtonTitle"
-					:variant="variant"
+					:variant="audioStreamError ? 'error' : variant"
 					:aria-label="audioButtonAriaLabel"
 					:class="{
 						'no-audio-available': !isAudioAvailable,
 						'audio-control-button': showDevices,
 					}"
-					:disabled="!isAudioAllowed || resumeAudioAfterChange"
+					:disabled="resumeAudioAfterChange"
 					@click.stop="toggleAudio">
 					<template #icon>
 						<VolumeIndicator
-							:audio-preview-available="isAudioAvailable"
-							:audio-enabled="showMicrophoneOn || resumeAudioAfterChange"
-							:current-volume="model.attributes.currentVolume"
-							:volume-threshold="model.attributes.volumeThreshold"
-							overlay-muted-color="#888888" />
+							:audioPreviewAvailable="isAudioAvailable"
+							:audioEnabled="showMicrophoneOn || resumeAudioAfterChange"
+							:currentVolume="model.attributes.currentVolume"
+							:volumeThreshold="model.attributes.volumeThreshold"
+							overlayMutedColor="#888888" />
 					</template>
 				</NcButton>
 			</template>
@@ -41,39 +41,61 @@
 
 		<NcActions
 			v-if="showDevices"
-			:disabled="!isAudioAvailable || !isAudioAllowed"
+			:disabled="!isAudioAllowed && !audioOutputSupported || !!audioStreamError"
 			class="audio-selector-button"
+			:class="{
+				'no-audio-available': !isAudioAvailable,
+			}"
 			@open="updateDevices">
 			<template #icon>
 				<IconChevronUp :size="16" />
 			</template>
-			<NcActionCaption :name="t('spreed', 'Select a microphone')" />
-			<NcActionButton
-				v-for="device in audioInputDevices"
-				:key="device.deviceId ?? 'none'"
-				class="audio-selector__action"
-				type="radio"
-				:model-value="audioInputId"
-				:value="device.deviceId"
-				:title="device.label"
-				@click="handleAudioInputIdChange(device.deviceId)">
-				{{ device.label }}
-			</NcActionButton>
+			<template v-if="isAudioAllowed">
+				<NcActionCaption :name="t('spreed', 'Select a microphone')" />
+				<NcActionButton
+					v-for="device in audioInputDevices"
+					:key="device.deviceId ?? 'none'"
+					class="audio-selector__action"
+					type="radio"
+					:modelValue="audioInputId"
+					:value="device.deviceId"
+					:title="device.label"
+					@click="handleAudioInputIdChange(device.deviceId)">
+					{{ device.label }}
+				</NcActionButton>
+			</template>
+			<NcActionSeparator v-if="isAudioAllowed && audioOutputSupported" />
 			<template v-if="audioOutputSupported">
-				<NcActionSeparator />
 				<NcActionCaption :name="t('spreed', 'Select a speaker')" />
 				<NcActionButton
 					v-for="device in audioOutputDevices"
 					:key="device.deviceId ?? 'none'"
 					class="audio-selector__action"
 					type="radio"
-					:model-value="audioOutputId"
+					:modelValue="audioOutputId"
 					:value="device.deviceId"
 					:title="device.label"
 					@click="handleAudioOutputIdChange(device.deviceId)">
 					{{ device.label }}
 				</NcActionButton>
 			</template>
+
+			<NcActionSeparator />
+			<NcActionButton
+				v-if="isAudioAllowed"
+				key="advanced-settings"
+				class="audio-selector__action"
+				closeAfterClick
+				@click="openAdvancedSettings">
+				{{ t('spreed', 'Microphone settings') }}
+			</NcActionButton>
+			<NcActionButton
+				key="media-settings"
+				class="audio-selector__action"
+				closeAfterClick
+				@click="emit('talk:media-settings:show')">
+				{{ t('spreed', 'Check devices') }}
+			</NcActionButton>
 		</NcActions>
 	</div>
 </template>
@@ -82,6 +104,7 @@
 import { emit } from '@nextcloud/event-bus'
 import { t } from '@nextcloud/l10n'
 import { useHotKey } from '@nextcloud/vue/composables/useHotKey'
+import { spawnDialog } from '@nextcloud/vue/functions/dialog'
 import { onBeforeUnmount, ref, watch } from 'vue'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionCaption from '@nextcloud/vue/components/NcActionCaption'
@@ -90,6 +113,7 @@ import NcActionSeparator from '@nextcloud/vue/components/NcActionSeparator'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcPopover from '@nextcloud/vue/components/NcPopover'
 import IconChevronUp from 'vue-material-design-icons/ChevronUp.vue'
+import AdvancedAudioDialog from '../../MediaSettings/AdvancedAudioDialog.vue'
 import VolumeIndicator from '../../UIShared/VolumeIndicator.vue'
 import { useDevices } from '../../../composables/useDevices.js'
 import { PARTICIPANT } from '../../../constants.ts'
@@ -171,6 +195,7 @@ export default {
 			devices,
 			audioInputId,
 			audioOutputId,
+			audioStreamError,
 			updateDevices,
 			audioOutputSupported,
 			updatePreferences,
@@ -202,6 +227,7 @@ export default {
 			devices,
 			audioInputId,
 			audioOutputId,
+			audioStreamError,
 			updateDevices,
 			audioOutputSupported,
 			updatePreferences,
@@ -294,8 +320,10 @@ export default {
 
 	methods: {
 		t,
+		emit,
+
 		toggleAudio() {
-			if (!this.isAudioAvailable) {
+			if (!this.isAudioAllowed || !this.isAudioAvailable) {
 				emit('talk:media-settings:show')
 				return
 			}
@@ -319,6 +347,12 @@ export default {
 		handleAudioOutputIdChange(audioOutputId) {
 			this.audioOutputId = audioOutputId
 			this.updatePreferences('audiooutput')
+		},
+
+		async openAdvancedSettings() {
+			if (await spawnDialog(AdvancedAudioDialog)) {
+				this.resumeAudioAfterChange = true
+			}
 		},
 	},
 }

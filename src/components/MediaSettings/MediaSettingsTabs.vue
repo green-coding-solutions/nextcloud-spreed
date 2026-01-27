@@ -23,7 +23,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-	(event: 'update:active', value?: string): void
+	'update:active': [value?: string]
 }>()
 
 /** Whether the tab panel is open */
@@ -108,7 +108,7 @@ function handleTabsAfterClosed() {
 		<TransitionExpand
 			:show="isOpen"
 			direction="vertical"
-			@after-leave="handleTabsAfterClosed">
+			@afterLeave="handleTabsAfterClosed">
 			<div class="tab-panels-container">
 				<div
 					v-for="tab in tabs"

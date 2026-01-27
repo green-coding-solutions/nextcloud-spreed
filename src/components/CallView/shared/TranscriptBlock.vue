@@ -14,7 +14,7 @@
 				:name="actorDisplayName"
 				:source="actorType"
 				:size="AVATAR.SIZE.SMALL"
-				:disable-menu="true" />
+				:disableMenu="true" />
 		</div>
 		<div class="transcript-block__text">
 			<p class="transcript-block__author">
@@ -181,6 +181,15 @@ export default {
 			}
 
 			return liveTranscriptionLanguages
+		},
+
+		liveTranscriptionTargetLanguages() {
+			const liveTranscriptionTargetLanguages = this.liveTranscriptionStore.getLiveTranscriptionTargetLanguages()
+			if (!liveTranscriptionTargetLanguages) {
+				return {}
+			}
+
+			return liveTranscriptionTargetLanguages
 		},
 
 		chunksWithSeparator() {
@@ -359,6 +368,10 @@ export default {
 
 			if (this.liveTranscriptionLanguages[chunk1.languageId]?.metadata) {
 				return this.liveTranscriptionLanguages[chunk1.languageId].metadata.separator
+			}
+
+			if (this.liveTranscriptionTargetLanguages[chunk1.languageId]?.metadata) {
+				return this.liveTranscriptionTargetLanguages[chunk1.languageId].metadata.separator
 			}
 
 			return ' '

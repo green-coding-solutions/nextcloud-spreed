@@ -18,6 +18,12 @@
 			<IconForumOutline :size="16" />
 			{{ threadTitle }}
 		</p>
+		<p
+			v-else-if="isScheduledMessage && isThreadReply"
+			class="message-main__thread-title">
+			<IconArrowLeftTop class="bidirectional-icon" :size="16" />
+			{{ t('spreed', 'Reply to thread "{threadTitle}"', { threadTitle }) }}
+		</p>
 		<!-- System or deleted message body content -->
 		<div
 			v-if="isSystemMessage || isDeletedMessage"
@@ -35,19 +41,19 @@
 				:arguments="richParameters"
 				autolink
 				dir="auto"
-				:reference-limit="0" />
+				:referenceLimit="0" />
 
 			<!-- Additional controls -->
 			<CallButton v-if="showJoinCallButton" class="call-button" />
 			<ConversationActionsShortcut
 				v-else-if="showConversationActionsShortcut"
 				:token="message.token"
-				:object-type="conversation.objectType"
-				:is-highlighted="isLastMessage" />
+				:objectType="conversation.objectType"
+				:isHighlighted="isLastMessage" />
 			<PollCard
 				v-else-if="showResultsButton"
 				:token="message.token"
-				show-as-button
+				showAsButton
 				v-bind="message.messageParameters.poll" />
 		</div>
 
@@ -67,10 +73,10 @@
 				autolink
 				dir="auto"
 				:interactive="message.markdown && isEditable"
-				:use-extended-markdown="message.markdown"
-				:reference-limit="1"
-				reference-interactive-opt-in
-				@interact-todo="handleInteraction" />
+				:useExtendedMarkdown="message.markdown"
+				:referenceLimit="1"
+				referenceInteractiveOptIn
+				@interactTodo="handleInteraction" />
 		</div>
 
 		<!-- Additional message info-->
@@ -86,8 +92,8 @@
 					:name="message.lastEditActorDisplayName"
 					:source="message.lastEditActorType"
 					:size="14"
-					disable-menu
-					disable-tooltip />
+					disableMenu
+					disableTooltip />
 			</span>
 			<span class="date" :class="{ 'date--hidden': hideDate }" :title="messageDate">{{ messageTime }}</span>
 
@@ -332,6 +338,10 @@ export default {
 			return [MESSAGE.SYSTEM_TYPE.CALL_ENDED, MESSAGE.SYSTEM_TYPE.CALL_ENDED_EVERYONE].includes(this.message.systemMessage)
 		},
 
+		isScheduledMessage() {
+			return this.message.referenceId?.startsWith('scheduled-')
+		},
+
 		isThreadStarterMessage() {
 			if (this.threadId || !this.message.isThread) {
 				return false
@@ -339,8 +349,11 @@ export default {
 
 			return this.message.id === this.message.threadId
 				|| (this.message.threadTitle && this.message.id.toString().startsWith('temp-'))
-				// FIXME properly render scheduled messages as threads
-				|| (this.message.threadTitle && this.message.threadId === -1)
+				|| (this.isScheduledMessage && this.message.threadTitle && this.message.threadId === -1)
+		},
+
+		isThreadReply() {
+			return this.message.isThread && this.message.id !== this.message.threadId
 		},
 
 		threadInfo() {
@@ -385,7 +398,7 @@ export default {
 		},
 
 		isTemporary() {
-			return this.message.timestamp === 0
+			return !this.isScheduledMessage && this.message.timestamp === 0
 		},
 
 		hideDate() {
@@ -560,8 +573,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-@use '../../../../../assets/markdown' as *;
-@use '../../../../../assets/variables' as *;
+@use '../../../../../assets/markdown.scss' as *;
+@use '../../../../../assets/variables.scss' as *;
 
 .message-main {
 	display: grid;
@@ -571,9 +584,10 @@ export default {
 	min-width: 100%;
 	// Layout 1 (standard view): text and info in two columns
 	grid-template-columns: minmax(0, $messages-text-max-width) $messages-info-width;
-	grid-row-gap: var(--default-grid-baseline);
+	row-gap: var(--default-grid-baseline);
 
-	.message-main__thread-title {
+	& .message-main__thread-title,
+	&--sided .message-main__thread-title {
 		grid-column: 1 / -1;
 		grid-row: 1;
 	}

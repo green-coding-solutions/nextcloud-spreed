@@ -28,8 +28,8 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-	(event: 'refresh'): void
-	(event: 'update:deviceId', value: string | null | undefined): void
+	refresh: []
+	'update:deviceId': [value: string | null]
 }>()
 
 const deviceOptions = computed<NcSelectOption[]>(() => {
@@ -110,7 +110,7 @@ function updateDeviceId(deviceId: NcSelectOption['id']) {
 
 		<NcSelect
 			v-model="deviceSelectedOption"
-			:input-id="`device-selector-${props.kind}`"
+			:inputId="`device-selector-${props.kind}`"
 			:options="deviceOptions"
 			label="label"
 			:aria-label-combobox="t('spreed', 'Select a device')"
@@ -119,7 +119,7 @@ function updateDeviceId(deviceId: NcSelectOption['id']) {
 			:disabled="!enabled || !deviceOptionsAvailable"
 			@open="$emit('refresh')" />
 
-		<slot name="extra-action" />
+		<slot name="extraAction" />
 	</div>
 </template>
 
